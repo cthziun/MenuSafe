@@ -4,6 +4,8 @@ import { DEMO_OCR_TEXT } from "../data/menuKnowledgeBase";
 export default function CaptureScreen({
   files,
   ocrText,
+  ocrStatus,
+  ocrError,
   isAnalyzing,
   profileSummary,
   onBack,
@@ -19,7 +21,7 @@ export default function CaptureScreen({
         </div>
         <h2 className="text-sm font-bold">Menu capture</h2>
         <p className="mt-1 text-xs text-stone-500">
-          Supports one photo, multiple pages, and screenshots. This prototype simulates OCR with auditable demo text.
+          Supports one photo, multiple pages, and screenshots. Review the extracted text before analyzing.
         </p>
 
         <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-200 bg-stone-50 px-4 py-8 text-center hover:border-teal-400 hover:bg-teal-50">
@@ -35,6 +37,16 @@ export default function CaptureScreen({
                 <img src={file.url} alt={file.name} className="h-24 w-full object-cover" />
               </div>
             ))}
+          </div>
+        )}
+
+        {(ocrStatus || ocrError) && (
+          <div
+            className={`mt-4 rounded-xl border px-3 py-2 text-xs font-semibold ${
+              ocrError ? "border-red-200 bg-red-50 text-red-700" : "border-teal-200 bg-teal-50 text-teal-800"
+            }`}
+          >
+            {ocrError || ocrStatus}
           </div>
         )}
 

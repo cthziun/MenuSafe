@@ -14,6 +14,51 @@ function matchAny(ingredients, terms) {
   return terms.filter((term) => containsTerm(text, term));
 }
 
+function unique(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function getRuleTerms() {
+  return unique([
+    ...ALLERGENS.flatMap((item) => item.terms || []),
+    ...DIETARY.flatMap((item) => [...(item.hard || []), ...(item.soft || [])]),
+    ...CONDITIONS.flatMap((item) => [...(item.hard || []), ...(item.soft || [])]),
+  ]).sort((a, b) => b.length - a.length);
+}
+
+function cleanOcrLine(line) {
+  return String(line || "")
+    .replace(/\s+/g, " ")
+    .replace(/[.$]*\b(?:nt|twd|usd)?\s*\$?\d+(?:[.,]\d{1,2})?\b\s*$/i, "")
+    .trim();
+}
+
+function parseOcrMenu(rawText) {
+  const ruleTerms = getRuleTerms();
+  const lines = String(rawText || "")
+    .split(/\n+/)
+    .map(cleanOcrLine)
+    .filter((line) => line.length >= 3)
+    .filter((line) => !/^(menu|restaurant|subtotal|total|service|tax)$/i.test(line));
+
+  return lines.slice(0, 20).map((line, index) => {
+    const [namePart, ingredientPart] = line.split(/\s*[:：-]\s*/, 2);
+    const candidateText = ingredientPart || line;
+    const detectedIngredients = ruleTerms.filter((term) => containsTerm(candidateText, term));
+
+    return {
+      id: `ocr_${index}_${line.toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 24)}`,
+      name: cleanOcrLine(namePart) || `Menu item ${index + 1}`,
+      localName: cleanOcrLine(namePart) || `Menu item ${index + 1}`,
+      mustTry: false,
+      ingredients: detectedIngredients.length ? detectedIngredients : [candidateText],
+      description: line,
+      fromOcr: true,
+      needsStaffConfirmation: detectedIngredients.length === 0 || !ingredientPart,
+    };
+  });
+}
+
 function inferAmbiguousRisk(dish, profile) {
   const ingredients = dish.ingredients.map(normalize);
   const hasAmbiguousIngredient = ingredients.some((ingredient) =>
@@ -58,7 +103,7 @@ export function extractMenuFromOcr(rawText) {
     return dishNames.some((name) => text.includes(name));
   });
 
-  return matchedDishes.length ? matchedDishes : MENU_KNOWLEDGE_BASE;
+  return matchedDishes.length ? matchedDishes : parseOcrMenu(rawText);
 }
 
 export function analyzeDish(dish, profile) {
@@ -167,6 +212,19 @@ export function analyzeDish(dish, profile) {
       source: llmFindings.length ? "Layer 2 AI inference" : "Layer 1 rule-based caution",
       findings,
       summary: topFinding?.reason || "Some ingredients or preparation details are uncertain.",
+      recommendation: "Ask staff to confirm ingredients, sauce, oil, stock, and preparation before ordering.",
+    };
+  }
+
+  if (dish.needsStaffConfirmation) {
+    return {
+      ...dish,
+      verdict: "yellow",
+      verdictLabel: "Ask first",
+      confidence: 58,
+      source: "OCR text analysis",
+      findings: [],
+      summary: "The photo text did not expose enough ingredients for a confident safety check.",
       recommendation: "Ask staff to confirm ingredients, sauce, oil, stock, and preparation before ordering.",
     };
   }

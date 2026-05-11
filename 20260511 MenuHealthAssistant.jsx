@@ -14,11 +14,15 @@ import ProfileScreen from "./src/screens/ProfileScreen";
 import ResultsScreen from "./src/screens/ResultsScreen";
 import StaffCardOverlay from "./src/screens/StaffCardOverlay";
 
+const TESSERACT_CDN = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js";
+
 export default function App() {
   const [screen, setScreen] = useState(1);
   const [profile, setProfile] = useState(makeDefaultProfile);
   const [files, setFiles] = useState([]);
   const [ocrText, setOcrText] = useState("");
+  const [ocrStatus, setOcrStatus] = useState("");
+  const [ocrError, setOcrError] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [results, setResults] = useState([]);
   const [expandedDish, setExpandedDish] = useState(null);
@@ -56,10 +60,45 @@ export default function App() {
     });
   }
 
-  function handleFiles(event) {
+  async function handleFiles(event) {
     const uploaded = Array.from(event.target.files || []);
     setFiles(uploaded.map((file) => ({ name: file.name, url: URL.createObjectURL(file) })));
-    setOcrText(DEMO_OCR_TEXT);
+    setOcrText("");
+    setOcrError("");
+
+    if (!uploaded.length) {
+      setOcrStatus("");
+      return;
+    }
+
+    setOcrStatus("Loading photo OCR...");
+    try {
+      const tesseract = await import(/* @vite-ignore */ TESSERACT_CDN);
+      const recognize = tesseract.recognize || tesseract.default?.recognize;
+      if (!recognize) throw new Error("OCR module did not load correctly.");
+
+      const extractedText = [];
+      for (const [index, file] of uploaded.entries()) {
+        setOcrStatus(`Reading photo ${index + 1} of ${uploaded.length}...`);
+        const result = await recognize(file, "eng+chi_tra", {
+          logger(message) {
+            if (message.status === "recognizing text") {
+              const percent = Math.round((message.progress || 0) * 100);
+              setOcrStatus(`Reading photo ${index + 1} of ${uploaded.length}: ${percent}%`);
+            }
+          },
+        });
+        extractedText.push(result?.data?.text || "");
+      }
+
+      const text = extractedText.join("\n").trim();
+      setOcrText(text);
+      setOcrStatus(text ? "OCR complete. Review the text, then analyze." : "No menu text was detected.");
+    } catch (error) {
+      setOcrStatus("");
+      setOcrError("Photo OCR could not run. You can still paste menu text or use the demo menu.");
+      console.error(error);
+    }
   }
 
   function runAnalysis(useDemo = false) {
@@ -94,6 +133,8 @@ export default function App() {
     setScreen(1);
     setFiles([]);
     setOcrText("");
+    setOcrStatus("");
+    setOcrError("");
     setResults([]);
     setSelectedDishes([]);
     setQuantities({});
@@ -119,6 +160,8 @@ export default function App() {
           <CaptureScreen
             files={files}
             ocrText={ocrText}
+            ocrStatus={ocrStatus}
+            ocrError={ocrError}
             isAnalyzing={isAnalyzing}
             profileSummary={profileSummary}
             onBack={() => setScreen(1)}
