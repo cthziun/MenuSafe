@@ -15,6 +15,51 @@ import ResultsScreen from "./src/screens/ResultsScreen";
 import StaffCardOverlay from "./src/screens/StaffCardOverlay";
 
 const TESSERACT_CDN = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js";
+const OCR_LANGUAGES = "eng+chi_tra+chi_sim";
+const OCR_MAX_WIDTH = 2200;
+
+function prepareImageForOcr(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const url = URL.createObjectURL(file);
+
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(3, Math.max(1.5, OCR_MAX_WIDTH / image.width));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(image.width * scale);
+      canvas.height = Math.round(image.height * scale);
+
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      context.imageSmoothingEnabled = false;
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+
+      for (let index = 0; index < data.length; index += 4) {
+        const gray = data[index] * 0.299 + data[index + 1] * 0.587 + data[index + 2] * 0.114;
+        const boosted = gray > 175 ? 255 : gray < 95 ? 0 : gray * 1.2;
+        data[index] = boosted;
+        data[index + 1] = boosted;
+        data[index + 2] = boosted;
+      }
+
+      context.putImageData(imageData, 0, 0);
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("Could not prepare image for OCR."));
+      }, "image/png");
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not load image for OCR."));
+    };
+
+    image.src = url;
+  });
+}
 
 export default function App() {
   const [screen, setScreen] = useState(1);
@@ -79,8 +124,10 @@ export default function App() {
 
       const extractedText = [];
       for (const [index, file] of uploaded.entries()) {
+        setOcrStatus(`Preparing photo ${index + 1} of ${uploaded.length}...`);
+        const preparedImage = await prepareImageForOcr(file);
         setOcrStatus(`Reading photo ${index + 1} of ${uploaded.length}...`);
-        const result = await recognize(file, "eng+chi_tra", {
+        const result = await recognize(preparedImage, OCR_LANGUAGES, {
           logger(message) {
             if (message.status === "recognizing text") {
               const percent = Math.round((message.progress || 0) * 100);
