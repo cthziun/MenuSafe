@@ -4,19 +4,22 @@ export default async function handler(request, response) {
     return response.status(405).json({ error: "Method not allowed" });
   }
 
-  const apiKey = process.env.OCR_SPACE_API_KEY;
+  const apiKey = process.env.OCR_SPACE_API_KEY?.trim();
   if (!apiKey) {
     return response.status(500).json({ error: "Missing OCR_SPACE_API_KEY environment variable." });
   }
 
   try {
     const { image, language = "auto" } = request.body || {};
-    if (!image || typeof image !== "string") {
+    if (!image || typeof image !== "string" || !image.startsWith("data:image/")) {
       return response.status(400).json({ error: "Missing image data." });
     }
 
+    const imageResponse = await fetch(image);
+    const imageBlob = await imageResponse.blob();
+
     const formData = new FormData();
-    formData.append("base64Image", image);
+    formData.append("file", imageBlob, "menu.png");
     formData.append("language", language);
     formData.append("isOverlayRequired", "false");
     formData.append("detectOrientation", "true");

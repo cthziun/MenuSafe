@@ -47,7 +47,7 @@ function prepareImageForOcr(file) {
       canvas.toBlob((blob) => {
         if (blob) resolve(blob);
         else reject(new Error("Could not prepare image for OCR."));
-      }, "image/png");
+      }, "image/jpeg", 0.82);
     };
 
     image.onerror = () => {
