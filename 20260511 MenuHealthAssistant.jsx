@@ -14,8 +14,6 @@ import ProfileScreen from "./src/screens/ProfileScreen";
 import ResultsScreen from "./src/screens/ResultsScreen";
 import StaffCardOverlay from "./src/screens/StaffCardOverlay";
 
-const TESSERACT_CDN = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js";
-const OCR_LANGUAGES = "eng+chi_tra+chi_sim";
 const OCR_MAX_WIDTH = 2200;
 
 function prepareImageForOcr(file) {
@@ -59,6 +57,28 @@ function prepareImageForOcr(file) {
 
     image.src = url;
   });
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Could not read image data."));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function extractTextWithOcrSpace(imageBlob) {
+  const image = await blobToDataUrl(imageBlob);
+  const response = await fetch("/api/ocr", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image, language: "auto" }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "OCR failed.");
+  return data.text || "";
 }
 
 export default function App() {
@@ -118,24 +138,12 @@ export default function App() {
 
     setOcrStatus("Loading photo OCR...");
     try {
-      const tesseract = await import(/* @vite-ignore */ TESSERACT_CDN);
-      const recognize = tesseract.recognize || tesseract.default?.recognize;
-      if (!recognize) throw new Error("OCR module did not load correctly.");
-
       const extractedText = [];
       for (const [index, file] of uploaded.entries()) {
         setOcrStatus(`Preparing photo ${index + 1} of ${uploaded.length}...`);
         const preparedImage = await prepareImageForOcr(file);
-        setOcrStatus(`Reading photo ${index + 1} of ${uploaded.length}...`);
-        const result = await recognize(preparedImage, OCR_LANGUAGES, {
-          logger(message) {
-            if (message.status === "recognizing text") {
-              const percent = Math.round((message.progress || 0) * 100);
-              setOcrStatus(`Reading photo ${index + 1} of ${uploaded.length}: ${percent}%`);
-            }
-          },
-        });
-        extractedText.push(result?.data?.text || "");
+        setOcrStatus(`Reading photo ${index + 1} of ${uploaded.length} with OCR.space...`);
+        extractedText.push(await extractTextWithOcrSpace(preparedImage));
       }
 
       const text = extractedText.join("\n").trim();
@@ -143,7 +151,7 @@ export default function App() {
       setOcrStatus(text ? "OCR complete. Review the text, then analyze." : "No menu text was detected.");
     } catch (error) {
       setOcrStatus("");
-      setOcrError("Photo OCR could not run. You can still paste menu text or use the demo menu.");
+      setOcrError(error.message || "Photo OCR could not run. You can still paste menu text or use the demo menu.");
       console.error(error);
     }
   }
