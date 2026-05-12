@@ -21,7 +21,7 @@ export default function CaptureScreen({
         </div>
         <h2 className="text-sm font-bold">Menu capture</h2>
         <p className="mt-1 text-xs text-stone-500">
-          Supports one photo, multiple pages, and screenshots. Review the extracted text before analyzing.
+          Supports one photo, multiple pages, and screenshots. Review the extracted menu before analyzing.
         </p>
 
         <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-200 bg-stone-50 px-4 py-8 text-center hover:border-teal-400 hover:bg-teal-50">
@@ -52,15 +52,15 @@ export default function CaptureScreen({
 
         <div className="mt-4">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">OCR text</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">Extracted menu</p>
             <button type="button" onClick={() => onSetOcrText(DEMO_OCR_TEXT)} className="text-xs font-bold text-teal-700">
-              Fill demo OCR
+              Fill demo menu
             </button>
           </div>
           <textarea
             value={ocrText}
             onChange={(event) => onSetOcrText(event.target.value)}
-            placeholder="Extracted menu text appears here. You can paste menu text for testing."
+            placeholder="Extracted dishes appear here. You can paste menu text for testing."
             className="min-h-36 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs outline-none focus:border-teal-400"
           />
         </div>

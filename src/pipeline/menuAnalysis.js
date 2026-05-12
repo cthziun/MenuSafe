@@ -59,6 +59,33 @@ function parseOcrMenu(rawText) {
   });
 }
 
+function normalizeStructuredDishes(dishes) {
+  if (!Array.isArray(dishes)) return [];
+
+  return dishes
+    .map((dish, index) => {
+      const name = dish.name || dish.english_name || `Menu item ${index + 1}`;
+      const ingredients = unique([
+        ...(Array.isArray(dish.visible_ingredients) ? dish.visible_ingredients : []),
+        ...(Array.isArray(dish.likely_ingredients) ? dish.likely_ingredients : []),
+        ...(Array.isArray(dish.allergy_risks) ? dish.allergy_risks : []),
+      ]).map((value) => String(value).trim()).filter(Boolean);
+
+      return {
+        id: `vision_${index}_${String(name).toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 24)}`,
+        name: dish.english_name || name,
+        localName: name,
+        mustTry: false,
+        ingredients: ingredients.length ? ingredients : ["ingredients not visible"],
+        description: [dish.category, dish.price].filter(Boolean).join(" | "),
+        fromVision: true,
+        uncertaintyNotes: Array.isArray(dish.uncertainty_notes) ? dish.uncertainty_notes : [],
+        needsStaffConfirmation: ingredients.length === 0 || Boolean(dish.uncertainty_notes?.length),
+      };
+    })
+    .filter((dish) => dish.localName.trim());
+}
+
 function inferAmbiguousRisk(dish, profile) {
   const ingredients = dish.ingredients.map(normalize);
   const hasAmbiguousIngredient = ingredients.some((ingredient) =>
@@ -94,7 +121,10 @@ function profileSeverity(profile, defaultSeverity = "hard") {
   return profile.severity === "soft" ? "soft" : defaultSeverity;
 }
 
-export function extractMenuFromOcr(rawText) {
+export function extractMenuFromOcr(rawText, structuredDishes = []) {
+  const visionDishes = normalizeStructuredDishes(structuredDishes);
+  if (visionDishes.length) return visionDishes;
+
   const text = normalize(rawText);
   if (!text) return MENU_KNOWLEDGE_BASE;
 
@@ -221,11 +251,15 @@ export function analyzeDish(dish, profile) {
       ...dish,
       verdict: "yellow",
       verdictLabel: "Ask first",
-      confidence: 58,
-      source: "OCR text analysis",
+      confidence: dish.fromVision ? 68 : 58,
+      source: dish.fromVision ? "Gemini vision extraction" : "OCR text analysis",
       findings: [],
-      summary: "The photo text did not expose enough ingredients for a confident safety check.",
-      recommendation: "Ask staff to confirm ingredients, sauce, oil, stock, and preparation before ordering.",
+      summary: dish.fromVision
+        ? "The menu image suggests this dish, but some ingredients or preparation details remain uncertain."
+        : "The photo text did not expose enough ingredients for a confident safety check.",
+      recommendation: dish.uncertaintyNotes?.length
+        ? `Ask staff to confirm: ${dish.uncertaintyNotes.join("; ")}.`
+        : "Ask staff to confirm ingredients, sauce, oil, stock, and preparation before ordering.",
     };
   }
 
@@ -241,6 +275,6 @@ export function analyzeDish(dish, profile) {
   };
 }
 
-export function analyzeMenu(profile, rawText) {
-  return extractMenuFromOcr(rawText).map((dish) => analyzeDish(dish, profile));
+export function analyzeMenu(profile, rawText, structuredDishes = []) {
+  return extractMenuFromOcr(rawText, structuredDishes).map((dish) => analyzeDish(dish, profile));
 }

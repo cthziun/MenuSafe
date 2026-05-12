@@ -14,7 +14,7 @@ import ProfileScreen from "./src/screens/ProfileScreen";
 import ResultsScreen from "./src/screens/ResultsScreen";
 import StaffCardOverlay from "./src/screens/StaffCardOverlay";
 
-const OCR_MAX_WIDTH = 2200;
+const OCR_MAX_WIDTH = 1600;
 
 function prepareImageForOcr(file) {
   return new Promise((resolve, reject) => {
@@ -47,7 +47,7 @@ function prepareImageForOcr(file) {
       canvas.toBlob((blob) => {
         if (blob) resolve(blob);
         else reject(new Error("Could not prepare image for OCR."));
-      }, "image/jpeg", 0.82);
+      }, "image/jpeg", 0.78);
     };
 
     image.onerror = () => {
@@ -68,17 +68,33 @@ function blobToDataUrl(blob) {
   });
 }
 
-async function extractTextWithOcrSpace(imageBlob) {
+function formatExtractedMenu(dishes) {
+  if (!dishes.length) return "";
+
+  return dishes
+    .map((dish) => {
+      const name = [dish.name, dish.english_name].filter(Boolean).join(" / ");
+      const ingredients = [
+        ...(Array.isArray(dish.visible_ingredients) ? dish.visible_ingredients : []),
+        ...(Array.isArray(dish.likely_ingredients) ? dish.likely_ingredients.map((item) => `${item} (likely)`) : []),
+        ...(Array.isArray(dish.allergy_risks) ? dish.allergy_risks.map((item) => `${item} risk`) : []),
+      ];
+      return `${name || "Menu item"}${dish.price ? ` - ${dish.price}` : ""}: ${ingredients.join(", ")}`;
+    })
+    .join("\n");
+}
+
+async function analyzeMenuImage(imageBlob) {
   const image = await blobToDataUrl(imageBlob);
-  const response = await fetch("/api/ocr", {
+  const response = await fetch("/api/analyze-menu-image", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ image, language: "auto" }),
+    body: JSON.stringify({ image }),
   });
 
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "OCR failed.");
-  return data.text || "";
+  if (!response.ok) throw new Error(data.error || "Menu image analysis failed.");
+  return Array.isArray(data.dishes) ? data.dishes : [];
 }
 
 export default function App() {
@@ -86,6 +102,7 @@ export default function App() {
   const [profile, setProfile] = useState(makeDefaultProfile);
   const [files, setFiles] = useState([]);
   const [ocrText, setOcrText] = useState("");
+  const [extractedDishes, setExtractedDishes] = useState([]);
   const [ocrStatus, setOcrStatus] = useState("");
   const [ocrError, setOcrError] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -129,6 +146,7 @@ export default function App() {
     const uploaded = Array.from(event.target.files || []);
     setFiles(uploaded.map((file) => ({ name: file.name, url: URL.createObjectURL(file) })));
     setOcrText("");
+    setExtractedDishes([]);
     setOcrError("");
 
     if (!uploaded.length) {
@@ -136,24 +154,30 @@ export default function App() {
       return;
     }
 
-    setOcrStatus("Loading photo OCR...");
+    setOcrStatus("Loading image analyzer...");
     try {
-      const extractedText = [];
+      const allDishes = [];
       for (const [index, file] of uploaded.entries()) {
         setOcrStatus(`Preparing photo ${index + 1} of ${uploaded.length}...`);
         const preparedImage = await prepareImageForOcr(file);
-        setOcrStatus(`Reading photo ${index + 1} of ${uploaded.length} with OCR.space...`);
-        extractedText.push(await extractTextWithOcrSpace(preparedImage));
+        setOcrStatus(`Understanding menu photo ${index + 1} of ${uploaded.length} with Gemini...`);
+        allDishes.push(...(await analyzeMenuImage(preparedImage)));
       }
 
-      const text = extractedText.join("\n").trim();
+      const text = formatExtractedMenu(allDishes);
+      setExtractedDishes(allDishes);
       setOcrText(text);
-      setOcrStatus(text ? "OCR complete. Review the text, then analyze." : "No menu text was detected.");
+      setOcrStatus(text ? "Menu extraction complete. Review the dishes, then analyze." : "No dishes were detected.");
     } catch (error) {
       setOcrStatus("");
-      setOcrError(error.message || "Photo OCR could not run. You can still paste menu text or use the demo menu.");
+      setOcrError(error.message || "Image analysis could not run. You can still paste menu text or use the demo menu.");
       console.error(error);
     }
+  }
+
+  function handleSetMenuText(text) {
+    setOcrText(text);
+    setExtractedDishes([]);
   }
 
   function runAnalysis(useDemo = false) {
@@ -163,7 +187,7 @@ export default function App() {
     setIsAnalyzing(true);
     setScreen(2);
     window.setTimeout(() => {
-      setResults(analyzeMenu(profile, sourceText));
+      setResults(analyzeMenu(profile, sourceText, useDemo ? [] : extractedDishes));
       setSelectedDishes([]);
       setQuantities({});
       setExpandedDish(null);
@@ -188,6 +212,7 @@ export default function App() {
     setScreen(1);
     setFiles([]);
     setOcrText("");
+    setExtractedDishes([]);
     setOcrStatus("");
     setOcrError("");
     setResults([]);
@@ -221,7 +246,7 @@ export default function App() {
             profileSummary={profileSummary}
             onBack={() => setScreen(1)}
             onFiles={handleFiles}
-            onSetOcrText={setOcrText}
+            onSetOcrText={handleSetMenuText}
             onAnalyze={runAnalysis}
           />
         )}
