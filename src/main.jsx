@@ -72,6 +72,40 @@ const softConflictOptions = [
   "Strong seafood flavor",
   "Caffeinated"
 ];
+const conflictAliases = {
+  Peanuts: ["peanut", "peanuts", "groundnut", "satay"],
+  "Tree nuts": ["almond", "cashew", "walnut", "hazelnut", "pistachio", "pecan", "macadamia", "tree nut", "nuts"],
+  Shellfish: ["shellfish", "shrimp", "prawn", "crab", "lobster", "clam", "mussel", "oyster", "scallop"],
+  Fish: ["fish", "anchovy", "salmon", "tuna", "cod", "bonito", "fish sauce"],
+  Milk: ["milk", "dairy", "cream", "butter", "cheese", "yogurt", "ghee"],
+  Eggs: ["egg", "eggs", "mayonnaise", "mayo"],
+  Soy: ["soy", "soybean", "soy sauce", "tofu", "miso", "edamame"],
+  Wheat: ["wheat", "flour", "bread", "noodle", "pasta", "dumpling", "batter"],
+  Sesame: ["sesame", "tahini"],
+  Gluten: ["gluten", "wheat", "barley", "rye", "flour", "bread", "noodle", "pasta"],
+  Pork: ["pork", "bacon", "ham", "lard", "prosciutto", "sausage"],
+  Beef: ["beef", "veal", "steak"],
+  Alcohol: ["alcohol", "wine", "beer", "mirin", "sake", "shaoxing", "cooking wine", "liquor"],
+  Gelatin: ["gelatin", "gelatine"],
+  Lard: ["lard", "pork fat"],
+  "Meat stock": ["meat stock", "chicken stock", "beef stock", "pork stock", "broth", "bone broth"],
+  Spicy: ["spicy", "chili", "chilli", "pepper", "sichuan", "hot sauce", "gochujang"],
+  Mushrooms: ["mushroom", "mushrooms", "shiitake", "truffle"],
+  Cilantro: ["cilantro", "coriander"],
+  Onion: ["onion", "shallot", "scallion", "spring onion"],
+  Garlic: ["garlic"],
+  "Raw vegetables": ["raw vegetable", "raw vegetables", "salad", "crudite"],
+  "Fried food": ["fried", "deep fried", "tempura", "crispy"],
+  "Cream sauce": ["cream sauce", "cream", "alfredo", "bechamel"],
+  Cheese: ["cheese", "parmesan", "mozzarella", "cheddar", "feta"],
+  "High sodium": ["salty", "soy sauce", "miso", "salted", "cured", "pickled"],
+  "High sugar": ["sugar", "sweet", "syrup", "caramel", "honey"],
+  Greasy: ["greasy", "oily", "fried", "deep fried"],
+  "Bitter melon": ["bitter melon"],
+  "Organ meat": ["liver", "kidney", "tripe", "heart", "organ meat"],
+  "Strong seafood flavor": ["seafood", "fish sauce", "anchovy", "bonito", "shrimp paste"],
+  Caffeinated: ["coffee", "tea", "matcha", "caffeine", "espresso"]
+};
 const defaultProfile = {
   name: "",
   dietary: [],
@@ -368,15 +402,35 @@ function ImportScreen({ app, updateApp, go, showToast }) {
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
   const [sourceMode, setSourceMode] = useState("text");
+  const [isImporting, setIsImporting] = useState(false);
+
+  async function importMenu(payload) {
+    setIsImporting(true);
+    try {
+      const result = await fetch("/api/analyze-menu", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await result.json();
+      if (!result.ok) throw new Error(data.error || "Menu import failed");
+      if (!data.dishes?.length) throw new Error("No menu items were detected.");
+      updateApp({ menuItems: data.dishes, importSource: payload.source || sourceMode });
+      showToast(`${data.dishes.length} menu items imported`);
+      go(4);
+    } catch (error) {
+      showToast(error.message || "Menu import failed");
+    } finally {
+      setIsImporting(false);
+    }
+  }
 
   function importText() {
-    const items = parseMenuText(text);
-    if (!items.length) {
+    if (!text.trim()) {
       showToast("Paste or type at least one menu item");
       return;
     }
-    updateApp({ menuItems: items, importSource: sourceMode });
-    go(4);
+    importMenu({ text, source: sourceMode });
   }
 
   function addUrlSource() {
@@ -384,8 +438,7 @@ function ImportScreen({ app, updateApp, go, showToast }) {
       showToast("Enter a menu URL first");
       return;
     }
-    updateApp({ importSource: url.trim() });
-    showToast("URL saved. Add menu items below.");
+    importMenu({ url: url.trim(), source: url.trim() });
   }
 
   function handleFile(event) {
@@ -395,12 +448,29 @@ function ImportScreen({ app, updateApp, go, showToast }) {
       file.text().then((content) => {
         setText(content);
         setSourceMode(file.name);
-        showToast("Text file loaded");
+        importMenu({ text: content, source: file.name });
       });
       return;
     }
-    updateApp({ importSource: file.name });
-    showToast("File attached. Type detected dishes to continue.");
+    if (file.type.startsWith("image/")) {
+      readFileAsDataUrl(file).then((dataUrl) => {
+        importMenu({
+          file: { name: file.name, mimeType: file.type, dataUrl },
+          source: file.name
+        });
+      });
+      return;
+    }
+    if (file.type === "application/pdf") {
+      readFileAsBase64(file).then((base64) => {
+        importMenu({
+          file: { name: file.name, mimeType: file.type, base64 },
+          source: file.name
+        });
+      });
+      return;
+    }
+    showToast("Please upload an image, PDF, or text file.");
   }
 
   return (
@@ -409,18 +479,18 @@ function ImportScreen({ app, updateApp, go, showToast }) {
       <div className="import-stack">
         <button className={`import-card ${sourceMode === "qr" ? "active" : ""}`} onClick={() => { setSourceMode("qr"); showToast("Camera scanning is not available in this web prototype"); }}>
           <Icon name="qr" />
-          <span><strong>Scan Restaurant QR Code</strong><small>Save the QR source, then paste or type menu items.</small></span>
+          <span><strong>Scan Restaurant QR Code</strong><small>Camera QR scanning is not enabled yet.</small></span>
         </button>
         <label className="import-card">
           <Icon name="camera" />
-          <span><strong>Upload Photos or Files</strong><small>Attach a menu file. Text files can be imported directly.</small></span>
-          <input type="file" accept="image/*,.txt,.csv,.pdf" onChange={handleFile} hidden />
+          <span><strong>Upload Photos or Files</strong><small>Analyze menu photos, PDFs, text, or CSV files.</small></span>
+          <input type="file" accept="image/*,.txt,.csv,.pdf,application/pdf" onChange={handleFile} disabled={isImporting} hidden />
         </label>
         <div className="import-card form-card">
           <Icon name="link" />
-          <span><strong>Import from URL</strong><small>Store the restaurant menu link for the session.</small></span>
+          <span><strong>Import from URL</strong><small>Fetch and analyze a public restaurant menu page.</small></span>
           <input className="field wide" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://" />
-          <button className="secondary compact-button" onClick={addUrlSource}>Save URL</button>
+          <button className="secondary compact-button" onClick={addUrlSource} disabled={isImporting}>Analyze URL</button>
         </div>
       </div>
 
@@ -431,7 +501,7 @@ function ImportScreen({ app, updateApp, go, showToast }) {
         onChange={(event) => setText(event.target.value)}
         placeholder={"Type one dish per line. Optional format: Dish name - ingredients or notes"}
       />
-      <button className="primary bottom-cta" onClick={importText}>Analyze Menu</button>
+      <button className="primary bottom-cta" onClick={importText} disabled={isImporting}>{isImporting ? "Analyzing..." : "Analyze Menu"}</button>
       {app.menuItems.length > 0 && <button className="secondary" onClick={() => go(4)}>View Existing Menu</button>}
     </Screen>
   );
@@ -658,9 +728,9 @@ function analyzeMenu(items, profile, members) {
   const softTerms = profile.soft;
 
   return items.map((item, index) => {
-    const text = `${item.name} ${item.subtitle || ""}`.toLowerCase();
-    const hardMatches = groupTerms.filter((term) => term && text.includes(term.toLowerCase()));
-    const softMatches = softTerms.filter((term) => term && text.includes(term.toLowerCase()));
+    const searchText = getDishSearchText(item);
+    const hardMatches = groupTerms.filter((term) => term && termMatches(searchText, term));
+    const softMatches = softTerms.filter((term) => term && termMatches(searchText, term));
     const risk = hardMatches.length ? "hard" : softMatches.length ? "soft" : "ok";
     const reasons = [
       ...hardMatches.map((term) => `${term} matches a hard conflict or member note.`),
@@ -677,13 +747,37 @@ function analyzeMenu(items, profile, members) {
       people: [profile.name || "You", ...members.map((member) => member.name)].filter(Boolean),
       ok: okCount,
       reasons,
-      confidence: reasons.length ? 72 : 88,
-      confidenceLabel: reasons.length ? "Medium" : "High",
+      confidence: item.importConfidence === "low" ? 58 : reasons.length ? 72 : 88,
+      confidenceLabel: item.importConfidence === "low" ? "Low" : reasons.length ? "Medium" : "High",
       question: reasons.length
         ? `Can this dish be prepared without ${unique([...hardMatches, ...softMatches]).join(", ")}?`
         : "Can you confirm the main ingredients and cooking method?"
     };
   });
+}
+
+function getDishSearchText(item) {
+  return [
+    item.name,
+    item.subtitle,
+    ...(item.visibleIngredients || []),
+    ...(item.likelyIngredients || []),
+    ...(item.allergyRisks || []),
+    ...(item.uncertaintyNotes || [])
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function termMatches(text, term) {
+  const aliases = conflictAliases[term] || [term, singularize(term)];
+  return unique(aliases.map((alias) => String(alias).toLowerCase()).filter(Boolean)).some((alias) => text.includes(alias));
+}
+
+function singularize(value) {
+  const text = String(value || "").toLowerCase();
+  return text.endsWith("s") ? text.slice(0, -1) : text;
 }
 
 function parseMenuText(text) {
@@ -700,6 +794,19 @@ function parseMenuText(text) {
         source: "typed"
       };
     });
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Could not read file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function readFileAsBase64(file) {
+  return readFileAsDataUrl(file).then((dataUrl) => String(dataUrl).split(",")[1] || "");
 }
 
 function makeSummary(app, selectedDishes) {
