@@ -527,10 +527,10 @@ function OverviewScreen({ dishes, go, openDish, selectedIds, toggleSelected }) {
               key={dish.id}
               dish={dish}
               onClick={() => openDish(dish)}
-              action={selectedIds.includes(dish.id) ? "Selected" : "View"}
+              action="View"
               onAction={(event) => {
                 event.stopPropagation();
-                toggleSelected(dish.id);
+                openDish(dish);
               }}
             />
           ))}
@@ -539,6 +539,7 @@ function OverviewScreen({ dishes, go, openDish, selectedIds, toggleSelected }) {
         <EmptyState title="No menu items yet" text="Import or add dishes to analyze them." />
       )}
       <Legend />
+      <div className="notice">Menu Overview is for inspecting risks. Add dishes to your shortlist from Dish Detail, Suggestions, or Add More.</div>
       <button className="primary bottom-cta" onClick={() => go(6)} disabled={!dishes.length}>Get Suggestions</button>
     </Screen>
   );
@@ -981,7 +982,7 @@ function MiniDish({ dish, selected, onClick }) {
     <button className="mini-dish" onClick={onClick}>
       <FoodArt tone={dish.tone} />
       <span><strong>{dish.name}</strong><OriginalName dish={dish} /><RiskLine dish={dish} /></span>
-      <b>{selected ? "OK" : "+"}</b>
+      <b>{selected ? "Added" : "+"}</b>
     </button>
   );
 }
