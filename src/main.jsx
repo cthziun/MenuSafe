@@ -982,7 +982,7 @@ function MiniDish({ dish, selected, onClick }) {
     <button className="mini-dish" onClick={onClick}>
       <FoodArt tone={dish.tone} />
       <span><strong>{dish.name}</strong><OriginalName dish={dish} /><RiskLine dish={dish} /></span>
-      <b>{selected ? "Added" : "+"}</b>
+      <b aria-label={selected ? "Remove from shortlist" : "Add to shortlist"}>{selected ? "x" : "+"}</b>
     </button>
   );
 }
