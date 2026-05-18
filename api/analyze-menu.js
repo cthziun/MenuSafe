@@ -66,10 +66,11 @@ async function buildGeminiParts(body) {
 
 Return JSON only with this shape:
 {
-  "dishes": [
+      "dishes": [
     {
       "category": "string or empty",
-      "name": "dish name as shown or translated",
+      "name": "English translated dish name when useful, otherwise the dish name as shown",
+      "original_name": "original dish text exactly as shown on the menu, or empty if same as name",
       "description": "short menu description or empty",
       "price": "visible price or empty",
       "visible_ingredients": ["ingredients explicitly visible in the menu"],
@@ -84,6 +85,8 @@ Return JSON only with this shape:
 Rules:
 - Do not invent dishes.
 - Do not treat page headings, slogans, phone/browser UI, or decorative text as dishes.
+- Put the user-readable English translation in name when the original is not English.
+- Put the original menu text in original_name, especially for Chinese/Japanese/Korean/local language names.
 - If ingredients are uncertain, put them in likely_ingredients or uncertainty_notes.
 - Keep dish names concise and readable in English when possible.
 - If the image/PDF/text is unclear, return an empty dishes array.`
@@ -174,6 +177,10 @@ function normalizeDishes(dishes) {
       return {
         id: cryptoId(),
         name: String(dish.name).trim(),
+        originalName: String(dish.original_name || "").trim(),
+        description: String(dish.description || "").trim(),
+        category: String(dish.category || "").trim(),
+        price: String(dish.price || "").trim(),
         subtitle: subtitleParts.join(" | "),
         visibleIngredients,
         likelyIngredients,

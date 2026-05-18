@@ -730,6 +730,48 @@ label.import-card {
   font-size: 12px;
 }
 
+.original-name {
+  color: #6a6587;
+}
+
+.detail-panel,
+.ingredient-groups {
+  border: 1px solid #dfe2ee;
+  border-radius: 10px;
+  background: #fff;
+  padding: 12px;
+  color: #151244;
+}
+
+.detail-panel strong,
+.detail-panel small {
+  display: block;
+}
+
+.detail-panel small {
+  margin-top: 4px;
+  color: #6a6587;
+  font-size: 12px;
+}
+
+.detail-panel p {
+  margin: 8px 0 0;
+  color: #403b72;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.ingredient-groups {
+  display: grid;
+  gap: 12px;
+}
+
+.ingredient-groups strong {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 12px;
+}
+
 .explain-list {
   margin: 0;
   padding-left: 18px;

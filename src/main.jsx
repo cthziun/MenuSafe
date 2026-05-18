@@ -561,11 +561,23 @@ function DishDetailScreen({ go, dish, selectedIds, toggleSelected }) {
         <FoodArt tone={dish.tone} />
         <div>
           <h2>{dish.name}</h2>
-          <p>{dish.subtitle || "No notes added"}</p>
+          {dish.originalName && dish.originalName !== dish.name && <p>{dish.originalName}</p>}
+          {!dish.originalName && <p>{dish.description || "No description added"}</p>}
           <RiskLine dish={dish} />
           <AvatarStrip names={dish.people} />
         </div>
       </div>
+      <SectionTitle title="Menu Text" />
+      <div className="detail-panel">
+        <strong>{dish.name}</strong>
+        {dish.originalName && dish.originalName !== dish.name && <small>{dish.originalName}</small>}
+        {dish.description && <p>{dish.description}</p>}
+        {[dish.category, dish.price].filter(Boolean).length > 0 && (
+          <p>{[dish.category, dish.price].filter(Boolean).join(" | ")}</p>
+        )}
+      </div>
+      <SectionTitle title="Detected Ingredients & Notes" />
+      <IngredientDetails dish={dish} />
       <SectionTitle title="Why is this flagged?" />
       {dish.reasons.length ? (
         <ul className="explain-list">{dish.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
@@ -668,7 +680,7 @@ function ReviewScreen({ go, selectedDishes, app, updateApp, showToast }) {
             <article className="review-card" key={dish.id}>
               <div className="mini-head">
                 <FoodArt tone={dish.tone} />
-                <div><strong>{dish.name}</strong><small>{dish.subtitle || "No notes added"}</small><RiskLine dish={dish} /></div>
+                <div><strong>{dish.name}</strong><OriginalName dish={dish} /><RiskLine dish={dish} /></div>
               </div>
               <div className="feedback-row">
                 {["Interested", "Okay", "Not for me"].map((vote) => (
@@ -790,6 +802,8 @@ function parseMenuText(text) {
       return {
         id: cryptoId(),
         name: name.trim(),
+        originalName: "",
+        description: notes.join(" - ").trim(),
         subtitle: notes.join(" - ").trim(),
         source: "typed"
       };
@@ -953,7 +967,8 @@ function DishCard({ dish, compact, onClick, action = "View", onAction }) {
       <FoodArt tone={dish.tone} />
       <span className="dish-copy">
         <strong>{dish.name}</strong>
-        <small>{dish.subtitle || "No notes added"}</small>
+        <OriginalName dish={dish} />
+        {!dish.originalName && dish.description && <small>{dish.description}</small>}
         <RiskLine dish={dish} />
       </span>
       <b onClick={onAction}>{action}</b>
@@ -965,9 +980,41 @@ function MiniDish({ dish, selected, onClick }) {
   return (
     <button className="mini-dish" onClick={onClick}>
       <FoodArt tone={dish.tone} />
-      <span><strong>{dish.name}</strong><small>{dish.subtitle || "No notes added"}</small><RiskLine dish={dish} /></span>
+      <span><strong>{dish.name}</strong><OriginalName dish={dish} /><RiskLine dish={dish} /></span>
       <b>{selected ? "OK" : "+"}</b>
     </button>
+  );
+}
+
+function OriginalName({ dish }) {
+  if (!dish.originalName || dish.originalName === dish.name) return null;
+  return <small className="original-name">{dish.originalName}</small>;
+}
+
+function IngredientDetails({ dish }) {
+  const groups = [
+    ["Visible ingredients", dish.visibleIngredients],
+    ["Likely ingredients", dish.likelyIngredients],
+    ["Allergy/risk clues", dish.allergyRisks],
+    ["Ask staff about", dish.uncertaintyNotes]
+  ].filter(([, items]) => Array.isArray(items) && items.length);
+
+  if (!groups.length && !dish.subtitle) {
+    return <p className="body-copy">No ingredient details were detected. Ask staff to confirm ingredients and preparation.</p>;
+  }
+
+  return (
+    <div className="ingredient-groups">
+      {groups.map(([label, items]) => (
+        <div key={label}>
+          <strong>{label}</strong>
+          <div className="pill-row">
+            {items.map((item) => <span key={`${label}-${item}`}>{item}</span>)}
+          </div>
+        </div>
+      ))}
+      {!groups.length && dish.subtitle && <p className="body-copy">{dish.subtitle}</p>}
+    </div>
   );
 }
 
