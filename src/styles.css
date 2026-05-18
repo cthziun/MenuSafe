@@ -646,8 +646,8 @@ label.import-card {
   min-height: 80px;
   padding: 10px;
   display: grid;
-  grid-template-columns: 62px 1fr 16px;
-  gap: 10px;
+  grid-template-columns: 62px minmax(0, 1fr) auto;
+  gap: 12px;
   text-align: left;
   align-items: center;
   color: #151244;
@@ -655,6 +655,29 @@ label.import-card {
 
 .dish-card.compact {
   min-height: 68px;
+}
+
+.dish-copy {
+  min-width: 0;
+}
+
+.dish-copy strong,
+.dish-copy small {
+  overflow-wrap: anywhere;
+}
+
+.dish-action {
+  align-self: center;
+  min-width: 68px;
+  max-width: 86px;
+  height: 34px;
+  border: 1px solid #d8dced;
+  border-radius: 999px;
+  background: #fff;
+  color: #35108f;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
 }
 
 .risk-line {

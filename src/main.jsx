@@ -963,7 +963,7 @@ function DishGroup({ dishes, empty, selectedIds, toggleSelected }) {
 
 function DishCard({ dish, compact, onClick, action = "View", onAction }) {
   return (
-    <button className={`dish-card ${compact ? "compact" : ""}`} onClick={onClick}>
+    <article className={`dish-card ${compact ? "compact" : ""}`} onClick={onClick}>
       <FoodArt tone={dish.tone} />
       <span className="dish-copy">
         <strong>{dish.name}</strong>
@@ -971,8 +971,8 @@ function DishCard({ dish, compact, onClick, action = "View", onAction }) {
         {!dish.originalName && dish.description && <small>{dish.description}</small>}
         <RiskLine dish={dish} />
       </span>
-      <b onClick={onAction}>{action}</b>
-    </button>
+      <button className="dish-action" onClick={onAction || onClick}>{action}</button>
+    </article>
   );
 }
 
