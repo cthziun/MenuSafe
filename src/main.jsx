@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import demoPeople from "./data/demoPeople.json";
 import "./styles.css";
 
 const STORAGE_KEY = "dinetogether.app.v2";
@@ -344,8 +345,14 @@ function ProfileScreen({ app, updateApp, go, canProceed, showToast }) {
 }
 
 function GroupScreen({ app, updateApp, go, showToast }) {
-  const [form, setForm] = useState({ name: "", role: "Adult", notes: "" });
+  const [form, setForm] = useState({ name: "", role: "Adult", hard: "", soft: "", preferences: "" });
+  const [memberId, setMemberId] = useState("");
+  const [query, setQuery] = useState("");
   const organizerName = app.profile.name || "Organizer";
+  const addedIds = new Set(app.members.map((member) => member.id));
+  const visiblePeople = demoPeople.filter((person) =>
+    `${person.name} ${person.id} ${person.notes.join(" ")}`.toLowerCase().includes(query.toLowerCase())
+  );
 
   function addMember() {
     if (!form.name.trim()) {
@@ -356,14 +363,49 @@ function GroupScreen({ app, updateApp, go, showToast }) {
       id: cryptoId(),
       name: form.name.trim(),
       role: form.role,
-      notes: splitList(form.notes)
+      hard: splitList(form.hard),
+      soft: splitList(form.soft),
+      preferences: splitList(form.preferences),
+      notes: unique([...splitList(form.hard), ...splitList(form.soft), ...splitList(form.preferences)])
     };
     updateApp({ members: [...app.members, member] });
-    setForm({ name: "", role: "Adult", notes: "" });
+    setForm({ name: "", role: "Adult", hard: "", soft: "", preferences: "" });
   }
 
   function removeMember(id) {
     updateApp({ members: app.members.filter((member) => member.id !== id) });
+  }
+
+  function addKnownPerson(person) {
+    if (addedIds.has(person.id)) {
+      removeMember(person.id);
+      return;
+    }
+    updateApp({
+      members: [
+        ...app.members,
+        {
+          id: person.id,
+          name: person.name,
+          role: person.role,
+          hard: person.hard || [],
+          soft: person.soft || [],
+          preferences: person.preferences || [],
+          notes: person.notes || []
+        }
+      ]
+    });
+  }
+
+  function addByMemberId() {
+    const cleanId = memberId.trim().toLowerCase();
+    const person = demoPeople.find((item) => item.id.toLowerCase() === cleanId);
+    if (!person) {
+      showToast("No demo contact found for that ID");
+      return;
+    }
+    addKnownPerson(person);
+    setMemberId("");
   }
 
   return (
@@ -372,16 +414,36 @@ function GroupScreen({ app, updateApp, go, showToast }) {
       <SectionTitle title="You (Organizer)" />
       <MemberCard member={{ name: organizerName, role: "Organizer", notes: profileNotes(app.profile) }} organizer />
 
-      <SectionTitle title="People you're ordering for" />
+      <SectionTitle title="Dining Members" />
       {app.members.length ? (
         <div className="stack">
           {app.members.map((member) => <MemberCard key={member.id} member={member} onRemove={() => removeMember(member.id)} />)}
         </div>
       ) : (
-        <EmptyState title="No dining members yet" text="Add people manually or continue with only your profile." />
+          <EmptyState title="No dining members yet" text="Add people manually or continue with only your profile." />
       )}
 
-      <SectionTitle title="Add People" />
+      <SectionTitle title="Add by Profile" />
+      <div className="member-id-row">
+        <input className="field" value={memberId} onChange={(event) => setMemberId(event.target.value)} placeholder="Member ID" />
+        <button onClick={addByMemberId}>Add</button>
+      </div>
+      <button className="list-action" onClick={() => showToast("Demo QR found: " + makeJoinCode(organizerName))}>Scan Member QR Code</button>
+
+      <SectionTitle title="Known People" />
+      <input className="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search contacts..." />
+      <div className="contact-list">
+        {visiblePeople.map((person) => (
+          <ContactCard
+            key={person.id}
+            person={person}
+            selected={addedIds.has(person.id)}
+            onClick={() => addKnownPerson(person)}
+          />
+        ))}
+      </div>
+
+      <SectionTitle title="Manual Guest Profile" />
       <div className="form-grid">
         <input className="field" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Member name" />
         <select className="field" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>
@@ -389,10 +451,11 @@ function GroupScreen({ app, updateApp, go, showToast }) {
           <option>Child</option>
           <option>Senior</option>
         </select>
-        <input className="field wide" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Needs, separated by commas" />
+        <input className="field wide" value={form.hard} onChange={(event) => setForm({ ...form, hard: event.target.value })} placeholder="Hard restrictions, separated by commas" />
+        <input className="field wide" value={form.soft} onChange={(event) => setForm({ ...form, soft: event.target.value })} placeholder="Soft preferences, separated by commas" />
+        <input className="field wide" value={form.preferences} onChange={(event) => setForm({ ...form, preferences: event.target.value })} placeholder="Other notes, separated by commas" />
       </div>
-      <button className="list-action" onClick={() => showToast("Share code: " + makeJoinCode(organizerName))}>Scan or Share Member QR Code</button>
-      <button className="primary" onClick={addMember}>Add Manually</button>
+      <button className="primary" onClick={addMember}>Add Guest</button>
       <button className="secondary" onClick={() => go(3)}>Continue</button>
     </Screen>
   );
@@ -737,8 +800,14 @@ function SummaryScreen({ go, selectedDishes, app, updateApp, showToast, resetSes
 }
 
 function analyzeMenu(items, profile, members) {
-  const groupTerms = unique([...profile.hard, ...members.flatMap((member) => member.notes || [])]);
-  const softTerms = profile.soft;
+  const groupTerms = unique([
+    ...profile.hard,
+    ...members.flatMap((member) => [...(member.hard || []), ...(member.notes || [])])
+  ]);
+  const softTerms = unique([
+    ...profile.soft,
+    ...members.flatMap((member) => member.soft || [])
+  ]);
 
   return items.map((item, index) => {
     const searchText = getDishSearchText(item);
@@ -950,6 +1019,20 @@ function MemberCard({ member, organizer, onRemove }) {
       <div className="member-notes">{(member.notes || []).slice(0, 2).map((note) => <span key={note}>{note}</span>)}</div>
       {onRemove ? <button className="remove-button" onClick={onRemove}>x</button> : <b>&gt;</b>}
     </article>
+  );
+}
+
+function ContactCard({ person, selected, onClick }) {
+  return (
+    <button className={`contact-card ${selected ? "selected" : ""}`} onClick={onClick}>
+      <Avatar name={person.avatar || person.name} />
+      <span>
+        <strong>{person.name}</strong>
+        <small>{person.id}</small>
+        <small>{(person.notes || []).slice(0, 2).join(" | ")}</small>
+      </span>
+      <b>{selected ? "x" : "+"}</b>
+    </button>
   );
 }
 

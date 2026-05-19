@@ -1,0 +1,57 @@
+[
+  {
+    "id": "mia-chen",
+    "name": "Mia Chen",
+    "role": "Child",
+    "avatar": "MC",
+    "dietary": [],
+    "hard": ["Peanuts"],
+    "soft": ["Spicy"],
+    "preferences": ["No raw vegetables"],
+    "notes": ["Peanut allergy", "No spicy food"]
+  },
+  {
+    "id": "daniel-chen",
+    "name": "Daniel Chen",
+    "role": "Adult",
+    "avatar": "DC",
+    "dietary": [],
+    "hard": ["Beef"],
+    "soft": ["Spicy"],
+    "preferences": ["Low spice"],
+    "notes": ["No beef", "Low spice"]
+  },
+  {
+    "id": "grandma-lin",
+    "name": "Grandma Lin",
+    "role": "Senior",
+    "avatar": "GL",
+    "dietary": ["Low sodium"],
+    "hard": ["Shellfish"],
+    "soft": ["High sodium"],
+    "preferences": ["Soft textures"],
+    "notes": ["No shellfish", "Low salt"]
+  },
+  {
+    "id": "alex-wu",
+    "name": "Alex Wu",
+    "role": "Adult",
+    "avatar": "AW",
+    "dietary": ["Vegetarian"],
+    "hard": ["Meat stock", "Pork", "Beef"],
+    "soft": ["Eggs"],
+    "preferences": [],
+    "notes": ["Vegetarian", "No meat stock"]
+  },
+  {
+    "id": "sam-park",
+    "name": "Sam Park",
+    "role": "Adult",
+    "avatar": "SP",
+    "dietary": ["Gluten-free"],
+    "hard": ["Gluten", "Wheat"],
+    "soft": [],
+    "preferences": [],
+    "notes": ["Gluten-free"]
+  }
+]

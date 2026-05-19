@@ -565,6 +565,76 @@ select.field {
   margin-bottom: 8px;
 }
 
+.member-id-row {
+  display: grid;
+  grid-template-columns: 1fr 66px;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.member-id-row button {
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  background: #35108f;
+  font-weight: 850;
+}
+
+.contact-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.contact-card {
+  width: 100%;
+  min-height: 62px;
+  border: 1px solid #dfe2ee;
+  border-radius: 10px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 30px;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 10px;
+  color: #151244;
+  text-align: left;
+}
+
+.contact-card.selected {
+  border-color: #35108f;
+  background: #f7f4ff;
+}
+
+.contact-card span {
+  min-width: 0;
+}
+
+.contact-card strong,
+.contact-card small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.contact-card small {
+  color: #6a6587;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.contact-card b {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  justify-self: end;
+  color: #35108f;
+  border: 1px solid #d8dced;
+  background: #fff;
+  font-size: 17px;
+}
+
 .import-stack {
   display: grid;
   gap: 14px;
