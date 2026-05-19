@@ -1057,10 +1057,11 @@ label.import-card {
 
 .summary-list div {
   min-height: 42px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
-  padding: 0 12px;
+  gap: 12px;
+  padding: 10px 12px;
   font-size: 13px;
 }
 
@@ -1068,16 +1069,37 @@ label.import-card {
   color: #4d477a;
 }
 
-.check {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  display: inline-grid;
-  place-items: center;
-  color: #fff;
-  background: #23945c;
-  font-size: 12px;
-  font-weight: 900;
+.summary-item span {
+  min-width: 0;
+}
+
+.summary-item strong,
+.summary-item .original-name {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.summary-risk {
+  border-radius: 999px;
+  padding: 5px 9px;
+  white-space: nowrap;
+  font-weight: 850;
+  font-size: 11px;
+}
+
+.summary-risk.ok {
+  color: #168654;
+  background: #edf8f2;
+}
+
+.summary-risk.soft {
+  color: #b55b00;
+  background: #fff6e8;
+}
+
+.summary-risk.hard {
+  color: #c1271d;
+  background: #fff0ec;
 }
 
 .notes-card {

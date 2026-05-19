@@ -783,7 +783,13 @@ function SummaryScreen({ go, selectedDishes, app, updateApp, showToast, resetSes
       {selectedDishes.length ? (
         <div className="summary-list">
           {selectedDishes.map((dish) => (
-            <div key={dish.id}><span className="check">OK</span>{dish.name} <small>({dish.riskLabel})</small></div>
+            <div key={dish.id} className="summary-item">
+              <span>
+                <strong>{dish.name}</strong>
+                <OriginalName dish={dish} />
+              </span>
+              <small className={`summary-risk ${dish.risk}`}>{dish.riskLabel}</small>
+            </div>
           ))}
         </div>
       ) : (
