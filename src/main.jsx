@@ -155,6 +155,7 @@ const emptyApp = {
   profile: defaultProfile,
   members: [],
   menuItems: [],
+  savedMenus: [],
   selectedIds: [],
   reviews: {},
   importSource: "",
@@ -502,6 +503,7 @@ function ImportScreen({ app, updateApp, go, showToast }) {
   const [url, setUrl] = useState("");
   const [sourceMode, setSourceMode] = useState("text");
   const [isImporting, setIsImporting] = useState(false);
+  const [menuName, setMenuName] = useState("");
 
   async function importMenu(payload) {
     setIsImporting(true);
@@ -514,7 +516,12 @@ function ImportScreen({ app, updateApp, go, showToast }) {
       const data = await result.json();
       if (!result.ok) throw new Error(data.error || "Menu import failed");
       if (!data.dishes?.length) throw new Error("No menu items were detected.");
-      updateApp({ menuItems: data.dishes, importSource: payload.source || sourceMode });
+      const importedSource = payload.source || sourceMode;
+      updateApp((current) => ({
+        menuItems: data.dishes,
+        importSource: importedSource,
+        savedMenus: maybeSaveMenu(current.savedMenus || [], menuName, importedSource, data.dishes)
+      }));
       showToast(`${data.dishes.length} menu items imported`);
       go(4);
     } catch (error) {
@@ -572,6 +579,17 @@ function ImportScreen({ app, updateApp, go, showToast }) {
     showToast("Please upload an image, PDF, or text file.");
   }
 
+  function loadSavedMenu(menu) {
+    updateApp({ menuItems: menu.items, importSource: menu.source || menu.name, selectedIds: [] });
+    showToast(`Loaded ${menu.name}`);
+    go(4);
+  }
+
+  function deleteSavedMenu(id) {
+    updateApp({ savedMenus: (app.savedMenus || []).filter((menu) => menu.id !== id) });
+    showToast("Saved menu removed");
+  }
+
   return (
     <Screen>
       <TopBar title="Import Menu" onBack={() => go(app.mode === "group" ? 2 : 1)} />
@@ -592,6 +610,26 @@ function ImportScreen({ app, updateApp, go, showToast }) {
           <button className="secondary compact-button" onClick={addUrlSource} disabled={isImporting}>Analyze URL</button>
         </div>
       </div>
+
+      <SectionTitle title="Saved Menus" />
+      {(app.savedMenus || []).length ? (
+        <div className="saved-menu-list">
+          {app.savedMenus.map((menu) => (
+            <article className="saved-menu-card" key={menu.id}>
+              <button onClick={() => loadSavedMenu(menu)}>
+                <strong>{menu.name}</strong>
+                <small>{menu.items.length} items | {new Date(menu.savedAt).toLocaleDateString()}</small>
+              </button>
+              <button className="remove-button" onClick={() => deleteSavedMenu(menu.id)}>x</button>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyState title="No saved menus yet" text="Name a menu before analyzing it to save it here." />
+      )}
+
+      <SectionTitle title="Save This Import As" optional />
+      <input className="field" value={menuName} onChange={(event) => setMenuName(event.target.value)} placeholder="Restaurant or menu name" />
 
       <SectionTitle title="Menu Items" />
       <textarea
@@ -931,6 +969,19 @@ function readFileAsDataUrl(file) {
 
 function readFileAsBase64(file) {
   return readFileAsDataUrl(file).then((dataUrl) => String(dataUrl).split(",")[1] || "");
+}
+
+function maybeSaveMenu(savedMenus, menuName, source, items) {
+  const cleanName = menuName.trim();
+  if (!cleanName) return savedMenus;
+  const savedMenu = {
+    id: cryptoId(),
+    name: cleanName,
+    source,
+    savedAt: new Date().toISOString(),
+    items
+  };
+  return [savedMenu, ...savedMenus.filter((menu) => menu.name.toLowerCase() !== cleanName.toLowerCase())].slice(0, 12);
 }
 
 function makeSummary(app, selectedDishes) {

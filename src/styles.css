@@ -666,6 +666,43 @@ select.field {
   font-size: 17px;
 }
 
+.saved-menu-list {
+  display: grid;
+  gap: 8px;
+}
+
+.saved-menu-card {
+  min-height: 58px;
+  border: 1px solid #dfe2ee;
+  border-radius: 10px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  gap: 8px;
+  align-items: center;
+  padding: 9px 10px;
+}
+
+.saved-menu-card > button:first-child {
+  border: 0;
+  background: transparent;
+  color: #151244;
+  text-align: left;
+  min-width: 0;
+}
+
+.saved-menu-card strong,
+.saved-menu-card small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.saved-menu-card small {
+  color: #6a6587;
+  font-size: 11px;
+  margin-top: 3px;
+}
+
 .import-stack {
   display: grid;
   gap: 14px;
