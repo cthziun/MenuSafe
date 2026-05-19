@@ -345,9 +345,10 @@ function ProfileScreen({ app, updateApp, go, canProceed, showToast }) {
 }
 
 function GroupScreen({ app, updateApp, go, showToast }) {
-  const [form, setForm] = useState({ name: "", role: "Adult", hard: "", soft: "", preferences: "" });
+  const [form, setForm] = useState({ name: "", role: "Adult", dietary: [], hard: [], soft: [], preferences: "" });
   const [memberId, setMemberId] = useState("");
   const [query, setQuery] = useState("");
+  const [showManual, setShowManual] = useState(false);
   const organizerName = app.profile.name || "Organizer";
   const addedIds = new Set(app.members.map((member) => member.id));
   const visiblePeople = demoPeople.filter((person) =>
@@ -363,13 +364,15 @@ function GroupScreen({ app, updateApp, go, showToast }) {
       id: cryptoId(),
       name: form.name.trim(),
       role: form.role,
-      hard: splitList(form.hard),
-      soft: splitList(form.soft),
+      dietary: form.dietary,
+      hard: form.hard,
+      soft: form.soft,
       preferences: splitList(form.preferences),
-      notes: unique([...splitList(form.hard), ...splitList(form.soft), ...splitList(form.preferences)])
+      notes: unique([...form.dietary, ...form.hard, ...form.soft, ...splitList(form.preferences)])
     };
     updateApp({ members: [...app.members, member] });
-    setForm({ name: "", role: "Adult", hard: "", soft: "", preferences: "" });
+    setForm({ name: "", role: "Adult", dietary: [], hard: [], soft: [], preferences: "" });
+    setShowManual(false);
   }
 
   function removeMember(id) {
@@ -423,14 +426,17 @@ function GroupScreen({ app, updateApp, go, showToast }) {
           <EmptyState title="No dining members yet" text="Add people manually or continue with only your profile." />
       )}
 
-      <SectionTitle title="Add by Profile" />
+      <SectionTitle title="Add People" />
+      <div className="add-methods">
+        <button onClick={() => setShowManual(true)}><span>Manual Guest</span><b>+</b></button>
+        <button onClick={() => showToast("Demo QR found: " + makeJoinCode(organizerName))}><span>Scan QR Code</span><b>⌗</b></button>
+      </div>
       <div className="member-id-row">
         <input className="field" value={memberId} onChange={(event) => setMemberId(event.target.value)} placeholder="Member ID" />
         <button onClick={addByMemberId}>Add</button>
       </div>
-      <button className="list-action" onClick={() => showToast("Demo QR found: " + makeJoinCode(organizerName))}>Scan Member QR Code</button>
 
-      <SectionTitle title="Known People" />
+      <SectionTitle title="Contact List" />
       <input className="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search contacts..." />
       <div className="contact-list">
         {visiblePeople.map((person) => (
@@ -443,20 +449,16 @@ function GroupScreen({ app, updateApp, go, showToast }) {
         ))}
       </div>
 
-      <SectionTitle title="Manual Guest Profile" />
-      <div className="form-grid">
-        <input className="field" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Member name" />
-        <select className="field" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>
-          <option>Adult</option>
-          <option>Child</option>
-          <option>Senior</option>
-        </select>
-        <input className="field wide" value={form.hard} onChange={(event) => setForm({ ...form, hard: event.target.value })} placeholder="Hard restrictions, separated by commas" />
-        <input className="field wide" value={form.soft} onChange={(event) => setForm({ ...form, soft: event.target.value })} placeholder="Soft preferences, separated by commas" />
-        <input className="field wide" value={form.preferences} onChange={(event) => setForm({ ...form, preferences: event.target.value })} placeholder="Other notes, separated by commas" />
-      </div>
-      <button className="primary" onClick={addMember}>Add Guest</button>
       <button className="secondary" onClick={() => go(3)}>Continue</button>
+      {showManual && (
+        <ManualGuestModal
+          form={form}
+          setForm={setForm}
+          onClose={() => setShowManual(false)}
+          onAdd={addMember}
+          showToast={showToast}
+        />
+      )}
     </Screen>
   );
 }
@@ -1033,6 +1035,65 @@ function ContactCard({ person, selected, onClick }) {
       </span>
       <b>{selected ? "x" : "+"}</b>
     </button>
+  );
+}
+
+function ManualGuestModal({ form, setForm, onClose, onAdd, showToast }) {
+  function submit() {
+    if (!form.name.trim()) {
+      showToast("Add a guest name first");
+      return;
+    }
+    onAdd();
+  }
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Manual guest profile">
+      <section className="modal-sheet">
+        <header className="modal-header">
+          <button onClick={onClose} aria-label="Close">x</button>
+          <strong>Manual Guest</strong>
+          <button onClick={submit}>Add</button>
+        </header>
+
+        <div className="form-grid">
+          <input className="field" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Guest name" />
+          <select className="field" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>
+            <option>Adult</option>
+            <option>Child</option>
+            <option>Senior</option>
+          </select>
+        </div>
+
+        <SectionTitle title="Dietary Identity" />
+        <OptionPicker
+          options={[...primaryDietaryOptions, ...moreDietaryOptions]}
+          selected={form.dietary}
+          onToggle={(item) => setForm({ ...form, dietary: toggle(form.dietary, item) })}
+        />
+
+        <SectionTitle title="Hard Conflicts" />
+        <TagList tags={form.hard} severity="hard" onRemove={(tag) => setForm({ ...form, hard: form.hard.filter((item) => item !== tag) })} />
+        <OptionPicker
+          options={hardConflictOptions.filter((item) => !form.hard.includes(item))}
+          selected={form.hard}
+          severity="hard"
+          onToggle={(item) => setForm({ ...form, hard: toggle(form.hard, item) })}
+        />
+
+        <SectionTitle title="Soft Conflicts" />
+        <TagList tags={form.soft} severity="soft" onRemove={(tag) => setForm({ ...form, soft: form.soft.filter((item) => item !== tag) })} />
+        <OptionPicker
+          options={softConflictOptions.filter((item) => !form.soft.includes(item))}
+          selected={form.soft}
+          severity="soft"
+          onToggle={(item) => setForm({ ...form, soft: toggle(form.soft, item) })}
+        />
+
+        <SectionTitle title="Other Notes" optional />
+        <input className="field" value={form.preferences} onChange={(event) => setForm({ ...form, preferences: event.target.value })} placeholder="Separated by commas" />
+      </section>
+    </div>
   );
 }
 

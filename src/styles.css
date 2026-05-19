@@ -580,6 +580,37 @@ select.field {
   font-weight: 850;
 }
 
+.add-methods {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.add-methods button {
+  min-height: 46px;
+  border: 1px solid #dfe2ee;
+  border-radius: 10px;
+  background: #fff;
+  color: #151244;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.add-methods b {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #f3efff;
+  color: #35108f;
+}
+
 .contact-list {
   display: grid;
   gap: 8px;
@@ -1116,6 +1147,50 @@ label.import-card {
   font-size: 12px;
   font-weight: 750;
   box-shadow: 0 12px 30px rgba(9, 7, 45, 0.22);
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  align-items: end;
+  background: rgba(9, 7, 45, 0.28);
+}
+
+.modal-sheet {
+  max-height: 88%;
+  overflow: auto;
+  border-radius: 22px 22px 0 0;
+  background: #fff;
+  padding: 12px 18px 20px;
+  box-shadow: 0 -16px 40px rgba(9, 7, 45, 0.18);
+}
+
+.modal-header {
+  position: sticky;
+  top: -12px;
+  z-index: 2;
+  height: 44px;
+  display: grid;
+  grid-template-columns: 52px 1fr 52px;
+  align-items: center;
+  background: #fff;
+  margin: -12px -18px 10px;
+  padding: 0 12px;
+  border-bottom: 1px solid #eceef6;
+}
+
+.modal-header strong {
+  text-align: center;
+  font-size: 14px;
+}
+
+.modal-header button {
+  border: 0;
+  background: transparent;
+  color: #35108f;
+  font-weight: 850;
 }
 
 .order {
