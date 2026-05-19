@@ -654,9 +654,7 @@ function DishDetailScreen({ go, dish, selectedIds, toggleSelected }) {
       <div className="meter"><span style={{ width: `${dish.confidence}%` }} /></div>
       <div className="confidence"><small>Based on your typed menu text and saved preferences.</small><b>{dish.confidenceLabel}</b></div>
       <SectionTitle title="Suggested Question for Staff" />
-      <button className="question-card" onClick={() => navigator.clipboard?.writeText(dish.question)}>
-        {dish.question}<span>Copy</span>
-      </button>
+      <StaffQuestion dish={dish} />
       <button className="primary bottom-cta" onClick={() => toggleSelected(dish.id)}>
         {selectedIds.includes(dish.id) ? "Remove from Shortlist" : "Add to Shortlist"}
       </button>
@@ -1167,6 +1165,29 @@ function IngredientDetails({ dish }) {
       {!groups.length && dish.subtitle && <p className="body-copy">{dish.subtitle}</p>}
     </div>
   );
+}
+
+function StaffQuestion({ dish }) {
+  const translated = translateStaffQuestion(dish.question);
+
+  return (
+    <div className="staff-question">
+      <div>
+        <strong>English</strong>
+        <p>{dish.question}</p>
+      </div>
+      <div>
+        <strong>Chinese</strong>
+        <p>{translated}</p>
+      </div>
+    </div>
+  );
+}
+
+function translateStaffQuestion(question) {
+  const avoid = question.match(/without (.+)\?/i)?.[1];
+  if (avoid) return `這道菜可以不加 ${avoid} 嗎？`;
+  return "可以請你確認這道菜的主要食材和烹調方式嗎？";
 }
 
 function RiskLine({ dish }) {

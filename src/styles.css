@@ -935,17 +935,27 @@ label.import-card {
   font-size: 11px;
 }
 
-.question-card {
-  width: 100%;
-  min-height: 74px;
-  padding: 14px;
-  text-align: left;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: #35108f;
-  font-weight: 850;
+.staff-question {
+  border: 1px solid #dfe2ee;
+  border-radius: 10px;
   background: #f7f4ff;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.staff-question strong {
+  display: block;
+  color: #35108f;
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+
+.staff-question p {
+  margin: 0;
+  color: #241d61;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .recommend-box {
