@@ -107,6 +107,40 @@ const conflictAliases = {
   "Strong seafood flavor": ["seafood", "fish sauce", "anchovy", "bonito", "shrimp paste"],
   Caffeinated: ["coffee", "tea", "matcha", "caffeine", "espresso"]
 };
+const zhConflictTerms = {
+  Peanuts: "花生",
+  "Tree nuts": "堅果",
+  Shellfish: "貝類或甲殼類海鮮",
+  Fish: "魚類",
+  Milk: "牛奶或乳製品",
+  Eggs: "蛋",
+  Soy: "大豆",
+  Wheat: "小麥",
+  Sesame: "芝麻",
+  Gluten: "麩質",
+  Pork: "豬肉",
+  Beef: "牛肉",
+  Alcohol: "酒精",
+  Gelatin: "明膠",
+  Lard: "豬油",
+  "Meat stock": "肉湯",
+  Spicy: "辣",
+  Mushrooms: "菇類",
+  Cilantro: "香菜",
+  Onion: "洋蔥",
+  Garlic: "大蒜",
+  "Raw vegetables": "生菜",
+  "Fried food": "油炸食物",
+  "Cream sauce": "奶油醬",
+  Cheese: "起司",
+  "High sodium": "高鈉",
+  "High sugar": "高糖",
+  Greasy: "油膩",
+  "Bitter melon": "苦瓜",
+  "Organ meat": "內臟",
+  "Strong seafood flavor": "重海鮮味",
+  Caffeinated: "咖啡因"
+};
 const defaultProfile = {
   name: "",
   dietary: [],
@@ -1186,8 +1220,19 @@ function StaffQuestion({ dish }) {
 
 function translateStaffQuestion(question) {
   const avoid = question.match(/without (.+)\?/i)?.[1];
-  if (avoid) return `這道菜可以不加 ${avoid} 嗎？`;
+  if (avoid) return `這道菜可以不加${translateConflictPhrase(avoid)}嗎？`;
   return "可以請你確認這道菜的主要食材和烹調方式嗎？";
+}
+
+function translateConflictPhrase(value) {
+  return String(value)
+    .split(",")
+    .map((term) => {
+      const clean = term.trim();
+      return zhConflictTerms[clean] || clean;
+    })
+    .filter(Boolean)
+    .join("、");
 }
 
 function RiskLine({ dish }) {
