@@ -1266,8 +1266,6 @@ function settingsScreen() {
 }
 
 function render() {
-  saveState();
-  navButtons.forEach((button) => button.classList.toggle("active", button.dataset.tab === primaryTab()));
   const screens = {
     home: homeScreen,
     profile: areaList,
@@ -1286,7 +1284,20 @@ function render() {
     language: languageScreen,
     settings: settingsScreen
   };
-  screens[state.screen]();
+  if (!screens[state.screen]) {
+    state.screen = "home";
+    state.stack = [];
+  }
+  saveState();
+  navButtons.forEach((button) => button.classList.toggle("active", button.dataset.tab === primaryTab()));
+  try {
+    screens[state.screen]();
+  } catch (error) {
+    console.error("Render failed", error);
+    state = { ...initialState, screen: "home", stack: [] };
+    saveState();
+    screens.home();
+  }
   content.scrollTop = 0;
 }
 
